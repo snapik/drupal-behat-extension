@@ -2,6 +2,7 @@
 namespace Promet\Drupal\Behat;
 
 use Promet\Drupal\Behat\SubContext\ContentTypeContext;
+use Promet\Drupal\Behat\SubContext\UserContext;
 use Drupal\DrupalExtension\Context\DrupalContext;
 
 // PHPUnit adds itself to the include path via composer.
@@ -12,7 +13,6 @@ class PrometDrupalContext extends DrupalContext
   private $assertDelegateClass = '\PHPUnit_Framework_Assert';
   private $drupalSession = FALSE;
   public function __construct(array $parameters) {
-    parent::__construct($parameters);
     $parameters['parent_context'] = $this;
     $this->useContext('DrupalUser', new UserContext($parameters));
     $this->useContext('DrupalContentType', new ContentTypeContext($parameters));
@@ -21,22 +21,25 @@ class PrometDrupalContext extends DrupalContext
   {
     parent::beforeScenario($event);
     // @todo provide our own mail system to ameliorate ensuing ugliness.
-    if (module_exists('devel')) {
-      variable_set('mail_system', array('default-system' => 'DevelMailLog'));
-    }
-    else {
-      throw new \Exception('You must ensure that the devel module is enabled');
-    }
-    if ($event instanceof ScenarioEvent) {
-      $fs = new Filesystem();
-      if ($mail_path = $event->getScenario()->getTitle()) {
-        $fs->remove('/tmp/' . $mail_path);
-        $fs->mkdir($mail_path);
+    if ($event->getScenario()->hasTag('mail')) {
+
+      if (module_exists('devel')) {
+        variable_set('mail_system', array('default-system' => 'DevelMailLog'));
       }
-      variable_set('devel_debug_mail_directory', $mail_path);
-            // NB: DevelMailLog is going to replace our separator with __.
-      variable_set('devel_debug_mail_file_format', '%to::%subject');
-      $this->mail = new \DevelMailLog();
+      else {
+        throw new \Exception('You must ensure that the devel module is enabled');
+      }
+      if ($event instanceof ScenarioEvent) {
+        $fs = new Filesystem();
+        if ($mail_path = $event->getScenario()->getTitle()) {
+          $fs->remove('/tmp/' . $mail_path);
+          $fs->mkdir($mail_path);
+        }
+        variable_set('devel_debug_mail_directory', $mail_path);
+              // NB: DevelMailLog is going to replace our separator with __.
+        variable_set('devel_debug_mail_file_format', '%to::%subject');
+        $this->mail = new \DevelMailLog();
+      }
     }
     if (!$this->drupalSession) {
       $_SERVER['SERVER_SOFTWARE'] = 'foo';
