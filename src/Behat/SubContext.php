@@ -4,11 +4,13 @@ namespace Promet\Drupal\Behat;
 use Behat\Behat\Context\BehatContext;
 use Drupal\DrupalExtension\Context\DrupalSubContextInterface;
 
-abstract class SubContext extends BehatContext implements DrupalSubContextInterface
+class SubContext extends BehatContext implements DrupalSubContextInterface
 {
   private $parentContext;
 
-  abstract public static function getAlias();
+  public static function getAlias() {
+    return "Drupal" . str_replace('Context','',get_called_class());
+  }
 
   public function __construct($parameters) {
     $this->parentContext = $parameters['parent_context'];
