@@ -24,9 +24,12 @@ class ContentTypeContext extends SubContext
         assertNotEmpty($this->contentType);
     }
     /**
-     * @Then /^I should have a "([^"]*)" field as a "([^"]*)" type, has a "([^"]*)" widget, (not required|required), and allows (\d+) value[s]?[.]?$/
+     * @Then /^I should have a "([^"]*)" field as a "([^"]*)" type, has a "([^"]*)" widget, (not required|required), and allows (\d+|(?i)unlimited) value[s]?[.]?$/
      */
     public function iShouldHaveAFieldAsTypeHasAWidgetRequiredAndAllowsValue($name, $type, $widget, $required, $cardinality) {
+        if (strcasecmp($cardinality, 'unlimited') == 0) {
+            $cardinality = '-1';
+        }
         $fields = field_info_instances("node", $this->contentType->type);
         $wantedField = NULL;
         foreach ($fields as $field) {
