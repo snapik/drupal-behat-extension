@@ -16,10 +16,6 @@ class PrometDrupalContext extends DrupalContext
     $parameters['parent_context'] = $this;
     $this->useContext('DrupalUser', new UserContext($parameters));
     $this->useContext('DrupalContentType', new ContentTypeContext($parameters));
-    $base_url = getenv('DRUPAL_BASE_URL');
-    if (!empty($base_url)) {
-      $this->setMinkParameter('base_url',$base_url);
-    }
   }
   public function beforeScenario($event)
   {
@@ -58,6 +54,10 @@ class PrometDrupalContext extends DrupalContext
     session_id($this->drupalSession->id);
     $_COOKIE[session_name()] = session_id();
     drupal_session_start();
+    $base_url = getenv('DRUPAL_BASE_URL');
+    if (!empty($base_url)) {
+      $this->setMinkParameter('base_url',$base_url);
+    }
     foreach (array('selenium2', 'goutte') as $session) {
       $session = $this->getMink()->getSession($session);
       $session->visit($this->locatePath('/index.php?foo=bar'));
