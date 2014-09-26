@@ -16,7 +16,7 @@ class PrometDrupalContext extends DrupalContext
     $parameters['parent_context'] = $this;
     $this->useContext('DrupalUser', new UserContext($parameters));
     $this->useContext('DrupalContentType', new ContentTypeContext($parameters));
-    $base_url = getenv(DRUPAL_BASE_URL);
+    $base_url = getenv('DRUPAL_BASE_URL');
     if (!empty($base_url)) {
       $this->setMinkParameter('base_url',$base_url);
     }
