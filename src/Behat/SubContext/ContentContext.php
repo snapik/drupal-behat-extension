@@ -12,11 +12,14 @@ class ContentContext extends SubContext
     }
 
     /**
-     * @Given /^(\d+) "([^"]*)" ([\w ]+) exist[s]?$/
+     * @Given /^(an|a|\d+) "([^"]*)" ([\w ]+) exist[s]?$/
      */
     public function createContent($amount, $bundleLabel, $entityTypeLabel) {
         $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
         $selectedEntityType = NULL;
+        if (in_array($amount, array('an', 'a'))) {
+            $amount = 1;
+        }
         foreach (entity_get_info() as $entityType => $entityInfo) {
             if (strtolower($entityInfo['label']) == strtolower($entityTypeLabel)) {
                 $selectedEntityType = $entityType;
@@ -27,7 +30,6 @@ class ContentContext extends SubContext
         if (empty($selectedEntityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
-        var_dump($selectedEntityInfo['bundles']);
         foreach ($selectedEntityInfo['bundles'] as $bundleMachineName => $bundle){
             if (strtolower($bundle['label']) == strtolower($bundleLabel)) {
                 $bundle = $bundleMachineName;
