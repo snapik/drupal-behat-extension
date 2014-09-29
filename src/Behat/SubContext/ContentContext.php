@@ -20,6 +20,7 @@ class ContentContext extends SubContext
         foreach (entity_get_info() as $entityType => $entityInfo) {
             if (strtolower($entityInfo['label']) == strtolower($entityTypeLabel)) {
                 $selectedEntityType = $entityType;
+                $selectedEntityInfo = $entityInfo;
                 break;
             }
         }
@@ -27,7 +28,13 @@ class ContentContext extends SubContext
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
         for ($i=0; $i<$amount; $i++) {
-            $this->content[$selectedEntityType][$bundle][$i] = entity_create($selectedEntityType, array('bundle' => $bundle));
+            $entity_object = entity_create(
+                $selectedEntityType,
+                array( $selectedEntityInfo['entity keys']['bundle'] => $bundle)
+            );
+            $wrapper = entity_metadata_wrapper($selectedEntityType, $entity_object);
+            $wrapper->save();
+            $this->content[$selectedEntityType][$bundle][$i] = $wrapper;
         }
     }
 }
