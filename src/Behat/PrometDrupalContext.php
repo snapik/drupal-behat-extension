@@ -2,6 +2,7 @@
 namespace Promet\Drupal\Behat;
 
 use Promet\Drupal\Behat\SubContext\ContentTypeContext;
+use Promet\Drupal\Behat\SubContext\ContentContext;
 use Promet\Drupal\Behat\SubContext\UserContext;
 use Drupal\DrupalExtension\Context\DrupalContext;
 
@@ -16,6 +17,7 @@ class PrometDrupalContext extends DrupalContext
     $parameters['parent_context'] = $this;
     $this->useContext('DrupalUser', new UserContext($parameters));
     $this->useContext('DrupalContentType', new ContentTypeContext($parameters));
+    $this->useContext('DrupalContent', new ContentContext($parameters));
   }
   public function beforeScenario($event)
   {
