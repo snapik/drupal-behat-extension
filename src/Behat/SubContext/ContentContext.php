@@ -14,7 +14,7 @@ class ContentContext extends SubContext
     /**
      * @Given /^(\d+) "([^"]*)" ([\w ]+) exist[s]?$/
      */
-    public function createContent($amount, $bundle, $entityTypeLabel) {
+    public function createContent($amount, $bundleLabel, $entityTypeLabel) {
         $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
         $selectedEntityType = NULL;
         foreach (entity_get_info() as $entityType => $entityInfo) {
@@ -27,10 +27,18 @@ class ContentContext extends SubContext
         if (empty($selectedEntityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
+        var_dump($selectedEntityInfo['bundles']);
+        foreach ($selectedEntityInfo['bundles'] as $bundleMachineName => $bundle){
+            if (strtolower($bundle['label']) == strtolower($bundleLabel)) {
+                $bundle = $bundleMachineName;
+                break;
+            }
+
+        }
         for ($i=0; $i<$amount; $i++) {
             $entity_object = entity_create(
                 $selectedEntityType,
-                array( $selectedEntityInfo['entity keys']['bundle'] => $bundle)
+                array( $selectedEntityInfo['entity keys']['bundle'] => strtolower($bundle))
             );
             $wrapper = entity_metadata_wrapper($selectedEntityType, $entity_object);
             $wrapper->save();
