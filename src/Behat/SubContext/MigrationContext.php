@@ -26,16 +26,10 @@ class MigrationContext extends SubContext
   }
 
   /**
-   * TO-DO: Make this work.
-   * @AfterFeature @migration
+   * TO-DO: MAKE THIS SHIT WORK.
+   * @AfterScenario @migration
    */
-  public static function rollbackMigration(FeatureEvent $event) {
-    $migration_array = migrate_migrations();
-    $migrations = array_keys($migration_array);
-    foreach ($migrations as $key => $machine_name) {
-      $migrate = Migration::getInstance($machine_name);
-      $migrate->processRollback();
-    }
+  public static function rollbackMigration() {
   }
 
   /**
