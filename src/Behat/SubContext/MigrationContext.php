@@ -110,13 +110,14 @@ class MigrationContext extends SubContext
     $nid = $this->getLastNodeID($title);
     var_dump($nid);
     $node = node_load($nid);
-    var_dump($node);
+    //var_dump($node);
     assertNotEmpty($node, "No item with the title $title was imported.");
     assertEquals(
       $title,
       $node->title,
       "Title doesn't have the value $title. Instead it has " . $node->title . '.'
     );
+    return $node;
   }
 
   /**
