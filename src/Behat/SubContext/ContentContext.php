@@ -49,7 +49,7 @@ class ContentContext extends SubContext
     }
 
     /**
-    * @Given /^that|^those "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" with the value of "([^"]*)"$/
+    * @Given /^that|^those "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
     */
     public function setEntityPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
         $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
