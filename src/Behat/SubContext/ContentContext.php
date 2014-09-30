@@ -76,9 +76,36 @@ class ContentContext extends SubContext
             foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
                 if ($fieldLabel == $wrapper_property['label']) {
                     $fieldMachineName = $key;
-                    switch ($wrapper_property['type']) {
-                        case 'boolean':
-                            $value = (bool) $rawValue;
+                    $fieldInfo = field_info_field($fieldMachineName);
+
+                    // @todo add condition for each field type.
+                    switch ($fieldInfo['type']) {
+                        case 'entityreference':
+                            $relatedEntityType = $fieldInfo['settings']['target_type'];
+                            $targetBundles = $fieldInfo['settings']['handler_settings']['target_bundles'];
+                            $query = new EntityFieldQuery();
+                            $query->entityCondition('entity_type', $relatedEntityType);
+
+                            // Adding special conditions.
+                            if (count($targetBundles) > 1) {
+                                $relatedBundles = array_keys($targetBundles);
+                                $query->entityCondition('bundle', $relatedBundles, 'IN');
+                            }
+                            else {
+                                $relatedBundles = reset($targetBundles);
+                                $query->entityCondition('bundle', $relatedBundles);
+                            }
+                            if ($relatedEntityType == 'node') {
+                                $query->propertyCondition('title', $rawValue);
+                            }
+                            if ($relatedEntityType == 'taxonomy_term' || $relatedEntityType == 'user') {
+                                $query->propertyCondition('name', $rawValue);
+                            }
+                            $results = $query->execute();
+                            if (empty($results)) {
+                                throw new \Exception("Entity that you want relate to current $entityTypeLabel doesn't exist.");
+                            }
+                            $value = array_keys($results[$relatedEntityType]);
                             break;
 
                         default:
