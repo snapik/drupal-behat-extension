@@ -14,38 +14,49 @@ class ContentContext extends SubContext
     /**
      * @Given /^(an|a|\d+) "([^"]*)" ([\w ]+) exist[s]?$/
      */
-    public function createContent($amount, $bundleLabel, $entityTypeLabel) {
-        $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
-        $selectedEntityType = NULL;
+    public function createEntity($amount, $bundleLabel, $entityTypeLabel) {
         if (in_array($amount, array('an', 'a'))) {
             $amount = 1;
         }
-        foreach (entity_get_info() as $entityType => $entityInfo) {
-            if (strtolower($entityInfo['label']) == strtolower($entityTypeLabel)) {
-                $selectedEntityType = $entityType;
-                $selectedEntityInfo = $entityInfo;
-                break;
-            }
-        }
-        if (empty($selectedEntityType)) {
+        $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
+        $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
+        if (empty($entityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
-        foreach ($selectedEntityInfo['bundles'] as $bundleMachineName => $bundle){
-            if (strtolower($bundle['label']) == strtolower($bundleLabel)) {
-                $bundle = $bundleMachineName;
+        $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
+        $entityInfo = entity_get_info($entityType);
+        for ($i=0; $i<$amount; $i++) {
+            $entityObject = entity_create(
+                $entityType,
+                array($entityInfo['entity keys']['bundle'] => $bundle)
+            );
+            $wrapper = entity_metadata_wrapper($entityType, $entityObject);
+            $wrapper->save();
+            $this->content[$entityType][$bundle][$i] = $wrapper;
+        }
+    }
+
+    public function getEntityTypeFromLabel($label) {
+        $selectedEntityType = NULL;
+        foreach (entity_get_info() as $entityType => $entityInfo) {
+            if (strtolower($entityInfo['label']) == strtolower($label)) {
+                $selectedEntityType = $entityType;
                 break;
             }
+        }
+        return $selectedEntityType;
+    }
 
+    public function getEntityBundleFromLabel($label, $type) {
+        $entityInfo = entity_get_info($type);
+        $selectedBundle = NULL;
+        foreach ($entityInfo['bundles'] as $bundleMachineName => $bundle){
+            if (strtolower($bundle['label']) == strtolower($label)) {
+                $selectedBundle = $bundleMachineName;
+                break;
+            }
         }
-        for ($i=0; $i<$amount; $i++) {
-            $entity_object = entity_create(
-                $selectedEntityType,
-                array( $selectedEntityInfo['entity keys']['bundle'] => strtolower($bundle))
-            );
-            $wrapper = entity_metadata_wrapper($selectedEntityType, $entity_object);
-            $wrapper->save();
-            $this->content[$selectedEntityType][$bundle][$i] = $wrapper;
-        }
+        return $selectedBundle;
     }
 
     /**
@@ -53,26 +64,13 @@ class ContentContext extends SubContext
     */
     public function setEntityPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
         $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
-        $selectedEntityType = NULL;
-        foreach (entity_get_info() as $entityType => $entityInfo) {
-            if (strtolower($entityInfo['label']) == strtolower($entityTypeLabel)) {
-                $selectedEntityType = $entityType;
-                $selectedEntityInfo = $entityInfo;
-                break;
-            }
-        }
-        if (empty($selectedEntityType)) {
+        $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
+        if (empty($entityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
-        foreach ($selectedEntityInfo['bundles'] as $bundleMachineName => $bundle){
-            if (strtolower($bundle['label']) == strtolower($bundleLabel)) {
-                $bundle = $bundleMachineName;
-                break;
-            }
-
-        }
+        $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
         $mainContext = $this->getMainContext();
-        $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$selectedEntityType][$bundleMachineName];
+        $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$entityType][$bundle];
 
         foreach ($wrappers as $wrapper) {
             foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
