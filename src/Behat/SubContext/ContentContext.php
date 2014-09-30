@@ -47,4 +47,54 @@ class ContentContext extends SubContext
             $this->content[$selectedEntityType][$bundle][$i] = $wrapper;
         }
     }
+
+    /**
+    * @Given /^that|^those "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" with the value of "([^"]*)"$/
+    */
+    public function setEntityPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
+        $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
+        $selectedEntityType = NULL;
+        foreach (entity_get_info() as $entityType => $entityInfo) {
+            if (strtolower($entityInfo['label']) == strtolower($entityTypeLabel)) {
+                $selectedEntityType = $entityType;
+                $selectedEntityInfo = $entityInfo;
+                break;
+            }
+        }
+        if (empty($selectedEntityType)) {
+            throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
+        }
+        foreach ($selectedEntityInfo['bundles'] as $bundleMachineName => $bundle){
+            if (strtolower($bundle['label']) == strtolower($bundleLabel)) {
+                $bundle = $bundleMachineName;
+                break;
+            }
+
+        }
+        $mainContext = $this->getMainContext();
+        $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$selectedEntityType][$bundleMachineName];
+
+        foreach ($wrappers as $wrapper) {
+            foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
+                if ($fieldLabel == $wrapper_property['label']) {
+                    $fieldMachineName = $key;
+                    switch ($wrapper_property['type']) {
+                        case 'boolean':
+                            $value = (bool) $rawValue;
+                            break;
+
+                        default:
+                            $value = $rawValue;
+                            break;
+                    }
+                    break;
+                }
+            }
+            if (empty($fieldMachineName)) {
+                throw new \Exception("Entity property $fieldLabel doesn't exist.");
+            }
+            $wrapper->$fieldMachineName->set($value);
+            $wrapper->save();
+        }
+    }
 }
