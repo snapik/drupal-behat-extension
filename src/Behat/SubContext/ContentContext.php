@@ -38,13 +38,29 @@ class ContentContext extends SubContext
 
         }
         for ($i=0; $i<$amount; $i++) {
-            $entity_object = entity_create(
-                $selectedEntityType,
-                array( $selectedEntityInfo['entity keys']['bundle'] => strtolower($bundle))
-            );
-            $wrapper = entity_metadata_wrapper($selectedEntityType, $entity_object);
-            $wrapper->save();
-            $this->content[$selectedEntityType][$bundle][$i] = $wrapper;
+            switch ($selectedEntityType) {
+                case 'taxonomy_term':
+                    foreach(taxonomy_vocabulary_get_names() as $taxonomyMachineName => $taxonomyInfo) {
+                        if(strtolower($taxonomyInfo->machine_name) == $bundle) {
+                            $vocabularyId = $taxonomyInfo->vid;
+                        }
+                    }
+                    // @TODO Should rewrite to entity_metadata_wrapper().
+                    $term = entity_property_values_create_entity($selectedEntityType, array(
+                        'vocabulary' => $vocabularyId,
+                    ))->save()->value();
+                    $this->content[$selectedEntityType][$bundle][$i] = $term;
+                    break;
+                default:
+                    $entity_object = entity_create(
+                        $selectedEntityType,
+                        array( $selectedEntityInfo['entity keys']['bundle'] => strtolower($bundle))
+                    );
+                    $wrapper = entity_metadata_wrapper($selectedEntityType, $entity_object);
+                    $wrapper->save();
+                    $this->content[$selectedEntityType][$bundle][$i] = $wrapper;
+                    break;
+            }
         }
     }
 }
