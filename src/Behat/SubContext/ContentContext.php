@@ -110,6 +110,67 @@ class ContentContext extends SubContext
                                 $value = array_keys($results[$relatedEntityType]);
                                 break;
 
+                            case 'image':
+                                try {
+                                    var_dump($rawValue);
+                                    $image = file_get_contents($rawValue);
+                                    $value = new \stdClass();
+                                    $value = file_save_data($image, 'public://', FILE_EXISTS_REPLACE);
+                                    var_dump($value);
+                                    // $url = 'http://okay.jpg.to/';
+                                    // $data = file_get_contents($url);
+                                    // $destination = 'public://';
+                                    // $replace = FILE_EXISTS_REPLACE;
+                                    // // $value = file_save_data($image, 'public://', FILE_EXISTS_REPLACE);
+
+
+
+                                    //   global $user;
+
+                                    //   if (empty($destination)) {
+                                    //     $destination = file_default_scheme() . '://';
+                                    //   }
+                                    //   if (!file_valid_uri($destination)) {
+                                    //     watchdog('file', 'The data could not be saved because the destination %destination is invalid. This may be caused by improper use of file_save_data() or a missing stream wrapper.', array('%destination' => $destination));
+                                    //     drupal_set_message(t('The data could not be saved, because the destination is invalid. More information is available in the system log.'), 'error');
+                                    //     return FALSE;
+                                    //   }
+
+                                    //   if ($uri = file_unmanaged_save_data($data, $destination, $replace)) {
+                                    //     var_dump($uri);
+                                    //     // Create a file object.
+                                    //     $file = new \stdClass();
+                                    //     $file->fid = NULL;
+                                    //     $file->uri = $uri;
+                                    //     $file->filename = drupal_basename($uri);
+                                    //     $file->filemime = file_get_mimetype($file->uri);
+                                    //     $file->uid = $user->uid;
+                                    //     $file->display = 1;
+                                    //     $file->status = FILE_STATUS_PERMANENT;
+                                    //     // If we are replacing an existing file re-use its database record.
+                                    //     if ($replace == FILE_EXISTS_REPLACE) {
+                                    //       $existing_files = file_load_multiple(array(), array('uri' => $uri));
+                                    //       if (count($existing_files)) {
+                                    //         $existing = reset($existing_files);
+                                    //         $file->fid = $existing->fid;
+                                    //         $file->filename = $existing->filename;
+                                    //       }
+                                    //     }
+                                    //     // If we are renaming around an existing file (rather than a directory),
+                                    //     // use its basename for the filename.
+                                    //     elseif ($replace == FILE_EXISTS_RENAME && is_file($destination)) {
+                                    //       $file->filename = drupal_basename($destination);
+                                    //     }
+
+                                    //     file_save($file);
+                                    //     var_dump($file);
+                                    //   }
+                                }
+                                catch (Exception $e) {
+                                    throw new \Exception("File $rawValue coundn't be saved.");
+                                }
+                                break;
+
                             default:
                                 $value = $rawValue;
                                 break;
@@ -120,8 +181,8 @@ class ContentContext extends SubContext
             if (empty($fieldMachineName)) {
                 throw new \Exception("Entity property $fieldLabel doesn't exist.");
             }
-            $wrapper->$fieldMachineName = $value;
-            $wrapper->save();
+            // $wrapper->$fieldMachineName = $value;
+            // $wrapper->save();
         }
     }
 }
