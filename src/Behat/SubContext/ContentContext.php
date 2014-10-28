@@ -14,53 +14,131 @@ class ContentContext extends SubContext
     /**
      * @Given /^(an|a|\d+) "([^"]*)" ([\w ]+) exist[s]?$/
      */
-    public function createContent($amount, $bundleLabel, $entityTypeLabel) {
-        $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
-        $selectedEntityType = NULL;
+    public function createEntity($amount, $bundleLabel, $entityTypeLabel) {
         if (in_array($amount, array('an', 'a'))) {
             $amount = 1;
         }
-        foreach (entity_get_info() as $entityType => $entityInfo) {
-            if (strtolower($entityInfo['label']) == strtolower($entityTypeLabel)) {
-                $selectedEntityType = $entityType;
-                $selectedEntityInfo = $entityInfo;
-                break;
-            }
-        }
-        if (empty($selectedEntityType)) {
+        $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
+        $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
+        if (empty($entityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
-        foreach ($selectedEntityInfo['bundles'] as $bundleMachineName => $bundle){
-            if (strtolower($bundle['label']) == strtolower($bundleLabel)) {
-                $bundle = $bundleMachineName;
+        $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
+        $entityInfo = entity_get_info($entityType);
+        for ($i=0; $i<$amount; $i++) {
+            $entityObject = entity_create(
+                $entityType,
+                array($entityInfo['entity keys']['bundle'] => $bundle)
+            );
+            $wrapper = entity_metadata_wrapper($entityType, $entityObject);
+            $wrapper->save();
+            $this->content[$entityType][$bundle][$i] = $wrapper;
+        }
+    }
+
+    public function getEntityTypeFromLabel($label) {
+        $selectedEntityType = NULL;
+        foreach (entity_get_info() as $entityType => $entityInfo) {
+            if (strtolower($entityInfo['label']) == strtolower($label)) {
+                $selectedEntityType = $entityType;
                 break;
             }
-
         }
-        for ($i=0; $i<$amount; $i++) {
-            switch ($selectedEntityType) {
-                case 'taxonomy_term':
-                    foreach(taxonomy_vocabulary_get_names() as $taxonomyMachineName => $taxonomyInfo) {
-                        if(strtolower($taxonomyInfo->machine_name) == $bundle) {
-                            $vocabularyId = $taxonomyInfo->vid;
+        return $selectedEntityType;
+    }
+
+    public function getEntityBundleFromLabel($label, $type) {
+        $entityInfo = entity_get_info($type);
+        $selectedBundle = NULL;
+        foreach ($entityInfo['bundles'] as $bundleMachineName => $bundle){
+            if (strtolower($bundle['label']) == strtolower($label)) {
+                $selectedBundle = $bundleMachineName;
+                break;
+            }
+        }
+        return $selectedBundle;
+    }
+
+    public function removePluralFromLabel($label) {
+        return preg_replace("/s$/", "", $label);
+    }
+
+    /**
+     * @Given /^(?:that|those) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
+     */
+    public function setEntityPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
+        $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
+        $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
+        if (empty($entityType)) {
+            throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
+        }
+        $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
+        $mainContext = $this->getMainContext();
+        $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$entityType][$bundle];
+
+        foreach ($wrappers as $wrapper) {
+            foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
+                if ($fieldLabel == $wrapper_property['label']) {
+                    $fieldMachineName = $key;
+                    if ($wrapper_property['type'] == 'boolean') {
+                        $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
+                    }
+                    elseif ($fieldInfo = field_info_field($fieldMachineName)) {
+                        // @todo add condition for each field type.
+                        switch ($fieldInfo['type']) {
+                            case 'entityreference':
+                                $relatedEntityType = $fieldInfo['settings']['target_type'];
+                                $targetBundles = $fieldInfo['settings']['handler_settings']['target_bundles'];
+                                $query = new \EntityFieldQuery();
+                                $query->entityCondition('entity_type', $relatedEntityType);
+
+                                // Adding special conditions.
+                                if (count($targetBundles) > 1) {
+                                    $relatedBundles = array_keys($targetBundles);
+                                    $query->entityCondition('bundle', $relatedBundles, 'IN');
+                                }
+                                else {
+                                    $relatedBundles = reset($targetBundles);
+                                    $query->entityCondition('bundle', $relatedBundles);
+                                }
+                                if ($relatedEntityType == 'node') {
+                                    $query->propertyCondition('title', $rawValue);
+                                }
+                                if ($relatedEntityType == 'taxonomy_term' || $relatedEntityType == 'user') {
+                                    $query->propertyCondition('name', $rawValue);
+                                }
+                                $results = $query->execute();
+                                if (empty($results)) {
+                                    throw new \Exception("Entity that you want relate to current $entityTypeLabel doesn't exist.");
+                                }
+                                $value = array_keys($results[$relatedEntityType]);
+                                break;
+
+                            case 'image':
+                                try {
+                                    $image = file_get_contents($rawValue);
+                                    $pathinfo = pathinfo($rawValue);
+                                    $filename = $pathinfo['basename'];
+                                    $file = (array) file_save_data($image, 'public://' . $filename, FILE_EXISTS_REPLACE);
+                                    $value = array($file);
+                                }
+                                catch (Exception $e) {
+                                    throw new \Exception("File $rawValue coundn't be saved.");
+                                }
+                                break;
+
+                            default:
+                                $value = $rawValue;
+                                break;
                         }
                     }
-                    // @TODO Should rewrite to entity_metadata_wrapper().
-                    $term = entity_property_values_create_entity($selectedEntityType, array(
-                        'vocabulary' => $vocabularyId,
-                    ))->save()->value();
-                    $this->content[$selectedEntityType][$bundle][$i] = $term;
-                    break;
-                default:
-                    $entity_object = entity_create(
-                        $selectedEntityType,
-                        array( $selectedEntityInfo['entity keys']['bundle'] => strtolower($bundle))
-                    );
-                    $wrapper = entity_metadata_wrapper($selectedEntityType, $entity_object);
-                    $wrapper->save();
-                    $this->content[$selectedEntityType][$bundle][$i] = $wrapper;
-                    break;
+                }
             }
+            if (empty($fieldMachineName)) {
+                throw new \Exception("Entity property $fieldLabel doesn't exist.");
+            }
+            $wrapper->$fieldMachineName = $value;
+            $wrapper->save();
         }
     }
 }
