@@ -18,7 +18,7 @@ class ContentContext extends SubContext
         if (in_array($amount, array('an', 'a'))) {
             $amount = 1;
         }
-        $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
+        $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
         $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
         if (empty($entityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
@@ -59,11 +59,15 @@ class ContentContext extends SubContext
         return $selectedBundle;
     }
 
+    public function removePluralFromLabel($label) {
+        return preg_replace("/s$/", "", $label);
+    }
+
     /**
      * @Given /^(?:that|those) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
      */
     public function setEntityPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
-        $entityTypeLabel = preg_replace("/s$/", "", $entityTypeLabel);
+        $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
         $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
         if (empty($entityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
