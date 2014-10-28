@@ -34,7 +34,7 @@ class PrometDrupalContext extends DrupalContext
         throw new \Exception('You must ensure that the devel module is enabled');
       }
       if ($event instanceof ScenarioEvent) {
-        $fs = new Filesystem();
+        $fs = new \Filesystem();
         if ($mail_path = $event->getScenario()->getTitle()) {
           $fs->remove('/tmp/' . $mail_path);
           $fs->mkdir($mail_path);
