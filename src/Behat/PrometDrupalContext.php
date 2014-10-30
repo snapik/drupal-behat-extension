@@ -5,6 +5,7 @@ use Promet\Drupal\Behat\SubContext\ContentTypeContext;
 use Promet\Drupal\Behat\SubContext\ContentContext;
 use Promet\Drupal\Behat\SubContext\UserContext;
 use Promet\Drupal\Behat\SubContext\MigrationContext;
+use Promet\Drupal\Behat\SubContext\RolesAndPermissionsContext;
 use Drupal\DrupalExtension\Context\DrupalContext;
 
 // PHPUnit adds itself to the include path via composer.
@@ -20,6 +21,7 @@ class PrometDrupalContext extends DrupalContext
     $this->useContext('DrupalContentType', new ContentTypeContext($parameters));
     $this->useContext('DrupalMigration', new MigrationContext($parameters));
     $this->useContext('DrupalContent', new ContentContext($parameters));
+    $this->useContext('DrupalRolesAndPermissions', new RolesAndPermissionsContext($parameters));
   }
   public function beforeScenario($event)
   {
@@ -34,7 +36,7 @@ class PrometDrupalContext extends DrupalContext
         throw new \Exception('You must ensure that the devel module is enabled');
       }
       if ($event instanceof ScenarioEvent) {
-        $fs = new \Filesystem();
+        $fs = new Filesystem();
         if ($mail_path = $event->getScenario()->getTitle()) {
           $fs->remove('/tmp/' . $mail_path);
           $fs->mkdir($mail_path);
