@@ -63,10 +63,35 @@ class ContentContext extends SubContext
         return preg_replace("/s$/", "", $label);
     }
 
+    public function convertOrdinalToCardinalNumber($itemPositionOrdinal) {
+        if ($itemPositionOrdinal == 'that' || $itemPositionOrdinal == 'those') {
+            return FALSE;
+        }
+        $ordinal = array(
+            'first'   => 1,
+            'second'  => 2,
+            'third'   => 3,
+            'fourth'  => 4,
+            'fifth'   => 5,
+            'sixth'   => 6,
+            'seventh' => 7,
+            'eighth'  => 8,
+            'ninth'   => 9,
+            'tenth'   => 10,
+        );
+        foreach ($ordinal as $key => $value) {
+            if ($key == $itemPositionOrdinal) {
+                $cardinal = $value - 1;
+                return $cardinal;
+            }
+        }
+        throw new \Exception("Use from first to tenth ordinal numbers.");
+    }
+
     /**
-     * @Given /^(?:that|those) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
+     * @Given /^([\w ]+) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
      */
-    public function setEntityPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
+    public function setEntityPropertyValue($itemPositionOrdinal, $bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
         $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
         $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
         if (empty($entityType)) {
@@ -75,8 +100,17 @@ class ContentContext extends SubContext
         $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
         $mainContext = $this->getMainContext();
         $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$entityType][$bundle];
+        $itemPositionCardinal = $this->convertOrdinalToCardinalNumber($itemPositionOrdinal);
+        if ($itemPositionCardinal !== FALSE) {
+            if (isset($wrappers[$itemPositionCardinal])) {
+                $wrappers = array($wrappers[$itemPositionCardinal]);
+            }
+            else {
+                throw new \Exception("There is no $itemPositionOrdinal element.");
+            }
+        }
 
-        foreach ($wrappers as $wrapper) {
+        foreach ($wrappers as $key => $wrapper) {
             foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
                 if ($fieldLabel == $wrapper_property['label']) {
                     $fieldMachineName = $key;
@@ -116,11 +150,16 @@ class ContentContext extends SubContext
 
                             case 'image':
                                 try {
+                                    $fieldInstance = field_info_instance($entityType, $fieldMachineName, $bundle);
+                                    $fieldDirectory = 'public://' . $fieldInstance['settings']['file_directory'];
                                     $image = file_get_contents($rawValue);
                                     $pathinfo = pathinfo($rawValue);
                                     $filename = $pathinfo['basename'];
-                                    $file = (array) file_save_data($image, 'public://' . $filename, FILE_EXISTS_REPLACE);
-                                    $value = array($file);
+                                    file_prepare_directory($fieldDirectory, FILE_CREATE_DIRECTORY);
+                                    $value = (array) file_save_data($image, $fieldDirectory . '/' . $filename, FILE_EXISTS_RENAME);
+                                    if (!$fieldInfo['cardinality']) {
+                                        $value = array($value);
+                                    }
                                 }
                                 catch (Exception $e) {
                                     throw new \Exception("File $rawValue coundn't be saved.");

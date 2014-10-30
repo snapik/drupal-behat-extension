@@ -25,15 +25,15 @@ class PrometDrupalContext extends DrupalContext
   {
     parent::beforeScenario($event);
     // @todo provide our own mail system to ameliorate ensuing ugliness.
-    if ($event->getScenario()->hasTag('mail')) {
+    if ($event instanceof ScenarioEvent) {
+      if ($event->getScenario()->hasTag('mail')) {
 
-      if (module_exists('devel')) {
-        variable_set('mail_system', array('default-system' => 'DevelMailLog'));
-      }
-      else {
-        throw new \Exception('You must ensure that the devel module is enabled');
-      }
-      if ($event instanceof ScenarioEvent) {
+        if (module_exists('devel')) {
+          variable_set('mail_system', array('default-system' => 'DevelMailLog'));
+        }
+        else {
+          throw new \Exception('You must ensure that the devel module is enabled');
+        }
         $fs = new \Filesystem();
         if ($mail_path = $event->getScenario()->getTitle()) {
           $fs->remove('/tmp/' . $mail_path);
