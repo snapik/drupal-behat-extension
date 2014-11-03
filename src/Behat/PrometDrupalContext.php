@@ -64,9 +64,14 @@ class PrometDrupalContext extends DrupalContext
     if (!empty($base_url)) {
       $this->setMinkParameter('base_url',$base_url);
     }
+    $userName = getenv('DRUPAL_BASIC_AUTH_USERNAME');
+    $pass = getenv('DRUPAL_BASIC_AUTH_PASS');
     foreach (array('selenium2', 'goutte') as $session) {
       $session = $this->getMink()->getSession($session);
       $session->visit($this->locatePath('/index.php?foo=bar'));
+      if (!empty($userName) && !empty($pass)) {
+          $this->getMink()->getSession()->setBasicAuth($userName,$pass);
+      }
     }
   }
   public function afterScenario($event)

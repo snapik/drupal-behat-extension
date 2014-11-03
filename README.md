@@ -34,3 +34,12 @@ For basic usage, simply extend your `FeatureContext` class with `PrometDrupalCon
 ```
 
 This will give you full access to all of the already defined helper functions and subcontexts built into this library.
+
+Configuration
+-------------
+
+This is the list of environment variables that can be set to help you configure multiple environments.
+
+* **DRUPAL_BASE_URL** - the URL for tests to begin with. If not set, this will be what ever is in your behat.yml.
+* **DRUPAL_BASIC_AUTH_USERNAME** - the HTTP Basic Auth username to enter before visiting a page.
+* **DRUPAL_BASIC_AUTH_PASS** - the HTTP Basic Auth password to enter before visiting a page.
