@@ -89,9 +89,32 @@ class ContentContext extends SubContext
     }
 
     /**
-     * @Given /^([\w ]+) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
+     * @Given /^(?:that|those) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
+     */
+    public function setEntitiesPropertyValue($bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
+        $wrappers = $this->getWrappers($bundleLabel, $entityTypeLabel);
+        foreach ($wrappers as $wrapper) {
+            $this->setValue($wrapper, $fieldLabel, $rawValue);
+        }
+    }
+
+    /**
+     * @Given /^the ([\w ]+) "([^"]*)" ([\w ]+) (?:has|have) "([^"]*)" set to "([^"]*)"$/
      */
     public function setEntityPropertyValue($itemPositionOrdinal, $bundleLabel, $entityTypeLabel, $fieldLabel, $rawValue) {
+        $itemPositionCardinal = $this->convertOrdinalToCardinalNumber($itemPositionOrdinal);
+        $wrappers = $this->getWrappers($bundleLabel, $entityTypeLabel);
+        if (isset($wrappers[$itemPositionCardinal])) {
+            $wrapper = $wrappers[$itemPositionCardinal];
+        }
+        else {
+            throw new \Exception("There is no $itemPositionOrdinal element.");
+        }
+        $this->setValue($wrapper, $fieldLabel, $rawValue);
+    }
+
+
+    public function getWrappers($bundleLabel, $entityTypeLabel) {
         $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
         $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
         if (empty($entityType)) {
@@ -100,84 +123,76 @@ class ContentContext extends SubContext
         $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
         $mainContext = $this->getMainContext();
         $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$entityType][$bundle];
-        $itemPositionCardinal = $this->convertOrdinalToCardinalNumber($itemPositionOrdinal);
-        if ($itemPositionCardinal !== FALSE) {
-            if (isset($wrappers[$itemPositionCardinal])) {
-                $wrappers = array($wrappers[$itemPositionCardinal]);
-            }
-            else {
-                throw new \Exception("There is no $itemPositionOrdinal element.");
-            }
-        }
+        return $wrappers;
+    }
 
-        foreach ($wrappers as $key => $wrapper) {
-            foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
-                if ($fieldLabel == $wrapper_property['label']) {
-                    $fieldMachineName = $key;
-                    if ($wrapper_property['type'] == 'boolean') {
-                        $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
-                    }
-                    elseif ($fieldInfo = field_info_field($fieldMachineName)) {
-                        // @todo add condition for each field type.
-                        switch ($fieldInfo['type']) {
-                            case 'entityreference':
-                                $relatedEntityType = $fieldInfo['settings']['target_type'];
-                                $targetBundles = $fieldInfo['settings']['handler_settings']['target_bundles'];
-                                $query = new \EntityFieldQuery();
-                                $query->entityCondition('entity_type', $relatedEntityType);
+    public function setValue($wrapper, $fieldLabel, $rawValue) {
+        foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
+            if ($fieldLabel == $wrapper_property['label']) {
+                $fieldMachineName = $key;
+                if ($wrapper_property['type'] == 'boolean') {
+                    $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
+                }
+                elseif ($fieldInfo = field_info_field($fieldMachineName)) {
+                    // @todo add condition for each field type.
+                    switch ($fieldInfo['type']) {
+                        case 'entityreference':
+                            $relatedEntityType = $fieldInfo['settings']['target_type'];
+                            $targetBundles = $fieldInfo['settings']['handler_settings']['target_bundles'];
+                            $query = new \EntityFieldQuery();
+                            $query->entityCondition('entity_type', $relatedEntityType);
 
-                                // Adding special conditions.
-                                if (count($targetBundles) > 1) {
-                                    $relatedBundles = array_keys($targetBundles);
-                                    $query->entityCondition('bundle', $relatedBundles, 'IN');
-                                }
-                                else {
-                                    $relatedBundles = reset($targetBundles);
-                                    $query->entityCondition('bundle', $relatedBundles);
-                                }
-                                if ($relatedEntityType == 'node') {
-                                    $query->propertyCondition('title', $rawValue);
-                                }
-                                if ($relatedEntityType == 'taxonomy_term' || $relatedEntityType == 'user') {
-                                    $query->propertyCondition('name', $rawValue);
-                                }
-                                $results = $query->execute();
-                                if (empty($results)) {
-                                    throw new \Exception("Entity that you want relate to current $entityTypeLabel doesn't exist.");
-                                }
-                                $value = array_keys($results[$relatedEntityType]);
-                                break;
+                            // Adding special conditions.
+                            if (count($targetBundles) > 1) {
+                                $relatedBundles = array_keys($targetBundles);
+                                $query->entityCondition('bundle', $relatedBundles, 'IN');
+                            }
+                            else {
+                                $relatedBundles = reset($targetBundles);
+                                $query->entityCondition('bundle', $relatedBundles);
+                            }
+                            if ($relatedEntityType == 'node') {
+                                $query->propertyCondition('title', $rawValue);
+                            }
+                            if ($relatedEntityType == 'taxonomy_term' || $relatedEntityType == 'user') {
+                                $query->propertyCondition('name', $rawValue);
+                            }
+                            $results = $query->execute();
+                            if (empty($results)) {
+                                throw new \Exception("Entity that you want relate doesn't exist.");
+                            }
+                            $value = array_keys($results[$relatedEntityType]);
+                            break;
 
-                            case 'image':
-                                try {
-                                    $fieldInstance = field_info_instance($entityType, $fieldMachineName, $bundle);
-                                    $fieldDirectory = 'public://' . $fieldInstance['settings']['file_directory'];
-                                    $image = file_get_contents($rawValue);
-                                    $pathinfo = pathinfo($rawValue);
-                                    $filename = $pathinfo['basename'];
-                                    file_prepare_directory($fieldDirectory, FILE_CREATE_DIRECTORY);
-                                    $value = (array) file_save_data($image, $fieldDirectory . '/' . $filename, FILE_EXISTS_RENAME);
-                                    if (!$fieldInfo['cardinality']) {
-                                        $value = array($value);
-                                    }
+                        case 'image':
+                            try {
+                                $fieldInstance = field_info_instance($entityType, $fieldMachineName, $bundle);
+                                $fieldDirectory = 'public://' . $fieldInstance['settings']['file_directory'];
+                                $image = file_get_contents($rawValue);
+                                $pathinfo = pathinfo($rawValue);
+                                $filename = $pathinfo['basename'];
+                                file_prepare_directory($fieldDirectory, FILE_CREATE_DIRECTORY);
+                                $value = (array) file_save_data($image, $fieldDirectory . '/' . $filename, FILE_EXISTS_RENAME);
+                                if (!$fieldInfo['cardinality']) {
+                                    $value = array($value);
                                 }
-                                catch (Exception $e) {
-                                    throw new \Exception("File $rawValue coundn't be saved.");
-                                }
-                                break;
+                            }
+                            catch (Exception $e) {
+                                throw new \Exception("File $rawValue coundn't be saved.");
+                            }
+                            break;
 
-                            default:
-                                $value = $rawValue;
-                                break;
-                        }
+                        default:
+                            $value = $rawValue;
+                            break;
                     }
                 }
             }
-            if (empty($fieldMachineName)) {
-                throw new \Exception("Entity property $fieldLabel doesn't exist.");
-            }
-            $wrapper->$fieldMachineName = $value;
-            $wrapper->save();
         }
+        if (empty($fieldMachineName)) {
+            throw new \Exception("Entity property $fieldLabel doesn't exist.");
+        }
+        $wrapper->$fieldMachineName = $value;
+        $wrapper->save();
     }
 }
