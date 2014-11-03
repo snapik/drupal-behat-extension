@@ -5,6 +5,7 @@ use Promet\Drupal\Behat\SubContext\ContentTypeContext;
 use Promet\Drupal\Behat\SubContext\ContentContext;
 use Promet\Drupal\Behat\SubContext\UserContext;
 use Promet\Drupal\Behat\SubContext\MigrationContext;
+use Promet\Drupal\Behat\SubContext\RolesAndPermissionsContext;
 use Drupal\DrupalExtension\Context\DrupalContext;
 
 // PHPUnit adds itself to the include path via composer.
@@ -19,6 +20,7 @@ class PrometDrupalContext extends DrupalContext
     $this->useContext('DrupalUser', new UserContext($parameters));
     $this->useContext('DrupalContentType', new ContentTypeContext($parameters));
     $this->useContext('DrupalMigration', new MigrationContext($parameters));
+    $this->useContext('DrupalRolesAndPermissions', new RolesAndPermissionsContext($parameters));
     $this->useContext('DrupalContent', new ContentContext($parameters));
   }
   public function beforeScenario($event)
