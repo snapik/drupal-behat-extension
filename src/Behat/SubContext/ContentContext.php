@@ -127,10 +127,16 @@ class ContentContext extends SubContext
     }
 
     public function setValue($wrapper, $fieldLabel, $rawValue) {
+        $subField = FALSE;
+        if (strpos($fieldLabel,':') !== FALSE) {
+            $fieldStrings = explode(':', $fieldLabel);
+            $fieldLabel = $fieldStrings[0];
+            $subField = $fieldStrings[1];
+        }
         foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
             if ($fieldLabel == $wrapper_property['label']) {
                 $fieldMachineName = $key;
-                if ($wrapper_property['type'] == 'boolean') {
+                if (isset($wrapper_property['type']) && $wrapper_property['type'] == 'boolean') {
                     $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
                 }
                 elseif ($fieldInfo = field_info_field($fieldMachineName)) {
@@ -166,14 +172,14 @@ class ContentContext extends SubContext
 
                         case 'image':
                             try {
-                                $fieldInstance = field_info_instance($entityType, $fieldMachineName, $bundle);
+                                $fieldInstance = field_info_instance($wrapper->type(), $fieldMachineName, $wrapper->getBundle());
                                 $fieldDirectory = 'public://' . $fieldInstance['settings']['file_directory'];
                                 $image = file_get_contents($rawValue);
                                 $pathinfo = pathinfo($rawValue);
                                 $filename = $pathinfo['basename'];
                                 file_prepare_directory($fieldDirectory, FILE_CREATE_DIRECTORY);
                                 $value = (array) file_save_data($image, $fieldDirectory . '/' . $filename, FILE_EXISTS_RENAME);
-                                if (!$fieldInfo['cardinality']) {
+                                if ($fieldInfo['cardinality'] > 1 || $fieldInfo['cardinality'] == FIELD_CARDINALITY_UNLIMITED) {
                                     $value = array($value);
                                 }
                             }
@@ -192,7 +198,12 @@ class ContentContext extends SubContext
         if (empty($fieldMachineName)) {
             throw new \Exception("Entity property $fieldLabel doesn't exist.");
         }
-        $wrapper->$fieldMachineName = $value;
+        if ($subField) {
+            $wrapper->$fieldMachineName->$subField = $value;
+        }
+        else {
+            $wrapper->$fieldMachineName = $value;
+        }
         $wrapper->save();
     }
 }
