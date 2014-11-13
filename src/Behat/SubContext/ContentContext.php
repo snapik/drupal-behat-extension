@@ -26,7 +26,7 @@ class ContentContext extends SubContext
         }
         $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
         
-        $entityValues = getEntitySetup($entityType, $bundle);
+        $entityValues = $this->getEntitySetup($entityType, $bundle);
                 
         for ($i=0; $i<$amount; $i++) {
             $entityObject = entity_create($entityType, $entityValues);
@@ -41,7 +41,7 @@ class ContentContext extends SubContext
       $entityValues = array(
         $entityInfo['entity keys']['bundle'] => $bundle
       );
-      return array_merge($entityValues, getEntityDefaults($entityType, $bundle));
+      return array_merge($entityValues, $this->getEntityDefaults($entityType, $bundle));
     }
 
     public function getEntityDefaults($entityType, $bundle) {  
