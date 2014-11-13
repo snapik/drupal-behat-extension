@@ -18,24 +18,41 @@ class ContentContext extends SubContext
         if (in_array($amount, array('an', 'a'))) {
             $amount = 1;
         }
+
         $entityTypeLabel = $this->removePluralFromLabel($entityTypeLabel);
         $entityType = $this->getEntityTypeFromLabel($entityTypeLabel);
         if (empty($entityType)) {
             throw new \Exception("Entity Type $entityTypeLabel doesn't exist.");
         }
         $bundle = $this->getEntityBundleFromLabel($bundleLabel, $entityType);
-        $entityInfo = entity_get_info($entityType);
+        
+        $entityValues = getEntitySetup($entityType, $bundle);
+                
         for ($i=0; $i<$amount; $i++) {
-            $entityObject = entity_create(
-                $entityType,
-                array($entityInfo['entity keys']['bundle'] => $bundle)
-            );
+            $entityObject = entity_create($entityType, $entityValues);
             $wrapper = entity_metadata_wrapper($entityType, $entityObject);
             $wrapper->save();
             $this->content[$entityType][$bundle][$i] = $wrapper;
         }
     }
+    
+    public function getEntitySetup($entityType, $bundle) {
+      $entityInfo = entity_get_info($entityType);  
+      $entityValues = array(
+        $entityInfo['entity keys']['bundle'] => $bundle
+      );
+      return array_merge($entityValues, getEntityDefaults($entityType, $bundle));
+    }
 
+    public function getEntityDefaults($entityType, $bundle) {  
+      $defaults = array(
+        'node' => array(
+          'title' => "Test Title"
+        )
+      );
+      return isset($defaults[$entityType]) ? $defaults[$entityType] : array();
+    }
+    
     public function getEntityTypeFromLabel($label) {
         $selectedEntityType = NULL;
         foreach (entity_get_info() as $entityType => $entityInfo) {
