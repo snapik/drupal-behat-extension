@@ -174,6 +174,8 @@ class ContentContext extends SubContext
     return $wrappers;
   }
 
+  // TODO: need to add a "clean up" hook for the different fields. For instance
+  //   files could use this to remove the file uploaded.
   public function setValue($wrapper, $fieldLabel, $rawValue) {
     $subField = FALSE;
     if (strpos($fieldLabel,':') !== FALSE) {
@@ -184,8 +186,19 @@ class ContentContext extends SubContext
     foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
       if ($fieldLabel == $wrapper_property['label']) {
         $fieldMachineName = $key;
-        if (isset($wrapper_property['type']) && $wrapper_property['type'] == 'boolean') {
-          $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
+        $fieldInfo = isset($wrapper_property['field']) && $wrapper_property['field'] ? field_info_field($fieldMachineName) : array();
+        if (empty($fieldInfo)) {
+          switch($wrapper_property['type']) {
+            case 'boolean':
+              $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
+              break;
+            case "date":
+              if (!is_numeric($rawValue)) {
+                $rawValue = strtotime($rawValue);
+              }
+            default:
+              $value = $rawValue;
+          }
         }
         elseif ($fieldInfo = field_info_field($fieldMachineName)) {
           // @todo add condition for each field type.
