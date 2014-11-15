@@ -192,7 +192,7 @@ class ContentContext extends SubContext
             case 'boolean':
               $value = filter_var($rawValue, FILTER_VALIDATE_BOOLEAN);
               break;
-            case "date":
+            case 'date':
               if (!is_numeric($rawValue)) {
                 $rawValue = strtotime($rawValue);
               }
