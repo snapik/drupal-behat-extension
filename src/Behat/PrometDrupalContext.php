@@ -116,18 +116,21 @@ class PrometDrupalContext extends DrupalContext
     // Log in.
     $submit->click();
 
-    // Get second step page.
-    $element = $this->getSession()->getPage();
+    // Check if Legal module exist.
+    if (module_exists('legal')){
+      // Get second step page.
+      $element = $this->getSession()->getPage();
 
-    $confirm = $element->findButton('Confirm');
-    if (empty($confirm)) {
-      throw new \Exception(sprintf("No submit button at %s", $this->getSession()->getCurrentUrl()));
+      $confirm = $element->findButton('Confirm');
+      if (empty($confirm)) {
+        throw new \Exception(sprintf("No submit button at %s", $this->getSession()->getCurrentUrl()));
+      }
+
+      $element->checkField('legal_accept');
+
+      // Confirm.
+      $confirm->click();
     }
-
-    $element->checkField('legal_accept');
-
-    // Confirm.
-    $confirm->click();
 
     if (!$this->loggedIn()) {
       throw new \Exception(sprintf("Failed to log in as user '%s' with role '%s'", $this->user->name, $this->user->role));
