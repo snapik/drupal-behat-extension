@@ -90,4 +90,47 @@ class PrometDrupalContext extends DrupalContext
       return call_user_func_array("{$this->assertDelegateClass}::$name", $args);
     }
   }
+
+  /**
+   * Helper function to login the current user.
+   */
+  public function login() {
+    // Check if logged in.
+    if ($this->loggedIn()) {
+      $this->logout();
+    }
+
+    if (!$this->user) {
+      throw new \Exception('Tried to login without a user.');
+    }
+
+    $this->getSession()->visit($this->locatePath('/user'));
+    $element = $this->getSession()->getPage();
+    $element->fillField($this->getDrupalText('username_field'), $this->user->name);
+    $element->fillField($this->getDrupalText('password_field'), $this->user->pass);
+    $submit = $element->findButton($this->getDrupalText('log_in'));
+    if (empty($submit)) {
+      throw new \Exception(sprintf("No submit button at %s", $this->getSession()->getCurrentUrl()));
+    }
+
+    // Log in.
+    $submit->click();
+
+    // Get second step page.
+    $element = $this->getSession()->getPage();
+
+    $confirm = $element->findButton('Confirm');
+    if (empty($confirm)) {
+      throw new \Exception(sprintf("No submit button at %s", $this->getSession()->getCurrentUrl()));
+    }
+
+    $element->checkField('legal_accept');
+
+    // Confirm.
+    $confirm->click();
+
+    if (!$this->loggedIn()) {
+      throw new \Exception(sprintf("Failed to log in as user '%s' with role '%s'", $this->user->name, $this->user->role));
+    }
+  }
 }
