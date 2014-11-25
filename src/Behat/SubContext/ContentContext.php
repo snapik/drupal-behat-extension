@@ -229,6 +229,9 @@ class ContentContext extends SubContext
                 throw new \Exception("Entity that you want relate doesn't exist.");
               }
               $value = array_keys($results[$relatedEntityType]);
+              if (count($value) == 1) {
+                $value = array_pop($value);
+              }
               break;
 
             case 'image':
