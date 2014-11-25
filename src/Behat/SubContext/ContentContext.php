@@ -260,15 +260,12 @@ class ContentContext extends SubContext
       }
     }
     if (empty($fieldMachineName)) {
-      echo('empty $fieldMachineName');
       throw new \Exception("Entity property $fieldLabel doesn't exist.");
     }
     if ($subField) {
-      echo('subfield');
       $wrapper->$fieldMachineName->$subField = $value;
     }
     else {
-      echo('else');
       $wrapper->$fieldMachineName = $value;
     }
     $wrapper->save();
