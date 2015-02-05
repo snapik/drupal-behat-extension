@@ -7,6 +7,8 @@ class ContentTypeContext extends SubContext
 {
     public $contentType;
 
+    protected $fieldList = array();
+
     public static function getAlias() {
         return "DrupalContentType";
     }
@@ -23,6 +25,7 @@ class ContentTypeContext extends SubContext
         }
         assertNotEmpty($this->contentType);
     }
+
     /**
      * @Then /^I should have a "([^"]*)" field as a "([^"]*)" type, has a "([^"]*)" widget, (not required|required), and allows (\d+|(?i)unlimited) value[s]?[.]?$/
      */
@@ -64,5 +67,15 @@ class ContentTypeContext extends SubContext
             $fieldInfo['cardinality'],
             "$name allows " . $fieldInfo['cardinality'] . " values. It should only allow $cardinality values."
         );
+        $this->fieldList[] = $wantedField['field_name'];
+    }
+
+    /**
+     * @Then /^I should not have other fields in this Content Type$/
+     */
+    public function iShouldNotHaveOtherFields() {
+        $fields = field_info_instances('node', $this->contentType->type);
+        $oddFields = array_diff(array_keys($fields), $this->fieldList);
+        assertEmpty($oddFields, 'Following fields should not be in this Content Type: ' . implode(', ', $oddFields));
     }
 }
