@@ -270,4 +270,30 @@ class ContentContext extends SubContext
     }
     $wrapper->save();
   }
+
+  /**
+   * @Given /^the ([\w ]+) ([\w ]+) "([^"]*)" should have "([^"]*)" value "([^"]*)"$/
+   */
+  public function theShouldHaveValue($bundleLabel, $entityTypeLabel, $entityLabel, $fieldLabel, $rawValue) {
+    $mainContext = $this->getMainContext();
+    $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$bundleLabel][$entityTypeLabel];
+    $this->checkValue($wrappers[$entityLabel], $fieldLabel, $rawValue);
+  }
+
+  public function checkValue($wrapper, $fieldLabel, $rawValue) {
+    if (strpos($fieldLabel,':') !== FALSE) {
+      $fieldStrings = explode(':', $fieldLabel);
+      $fieldLabel = $fieldStrings[0];
+    }
+    $field_exist = FALSE;
+    foreach ($wrapper->getPropertyInfo() as $key => $wrapper_property) {
+      if ($fieldLabel == $wrapper_property['label']) {
+        $fieldMachineName = $key;
+        $field_exist = TRUE;
+        $field_value = $wrapper->$fieldMachineName->value();
+        assertTrue($field_value == $rawValue, "Field $fieldLabel doesn't have value $rawValue");
+      }
+    }
+    assertTrue($field_exist, "Field $fieldLabel doesn't exist");
+  }
 }
