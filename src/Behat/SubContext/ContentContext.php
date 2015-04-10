@@ -277,7 +277,11 @@ class ContentContext extends SubContext
   public function theShouldHaveValue($bundleLabel, $entityTypeLabel, $entityLabel, $fieldLabel, $rawValue) {
     $mainContext = $this->getMainContext();
     $wrappers = $mainContext->getSubcontext('DrupalContent')->content[$bundleLabel][$entityTypeLabel];
-    $this->checkValue($wrappers[$entityLabel], $fieldLabel, $rawValue);
+    // Refresh entity.
+    $id = $wrappers[$entityLabel]->getIdentifier();
+    $entity = entity_load($entityTypeLabel, array($id), array(), TRUE);
+    $wrapper = entity_metadata_wrapper($entityTypeLabel, $entity[$id]);
+    $this->checkValue($wrapper, $fieldLabel, $rawValue);
   }
 
   public function checkValue($wrapper, $fieldLabel, $rawValue) {
